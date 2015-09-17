@@ -71,8 +71,8 @@ if __name__=="__main__":
     extend_dir = 'extend_labels/'
     labels_path = extend_dir + "chinese.label.manual."
     auto_path = extend_dir + "chinese.label.extend."
-    raw_text_path = "../SegPhrase/data/Chinese.txt"
-    patterns_path = "../SegPhrase/results/patterns.csv"
+    raw_text_path = "Chinese.txt"
+    patterns_path = "patterns.csv"
 
     #copy the orignial file
     shutil.copyfile( labels_path + str(last) , labels_path + str( int(last)+1 ))
