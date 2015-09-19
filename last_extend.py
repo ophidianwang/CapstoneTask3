@@ -118,40 +118,61 @@ if __name__=="__main__":
         print( "build model" )
         #load raw_text
         sentences = LineSentence(raw_text_path)
-        model = Word2Vec(sentences, size=100, window=5, min_count=5, workers=2)
+        model = Word2Vec(sentences, size=200, window=5, min_count=5, workers=2)
         model.save(model_path)
         model.init_sims(replace=True)
 
     proto_phrases = []
-    for phrase in qualified_labels:
+    sim_map = {}
+    for i,phrase in enumerate(qualified_labels):
+        if(i>200):
+            break;
         try:
             word_set = []
-            segments = phrase.split(' ')
+            segments = [ unicode(x) for x in phrase.split(' ')]
+            print(segments)
+            if(len(segments)>2):
+                continue
             topn = 14 - len(segments)*2
-            for word in segments:
-                candidate = model.most_similar(positive=[word],topn=topn)
-                #print(word + " similiar to :")
-                trimed_list = []
+            for j,word in enumerate(segments):
+                candidate = model.most_similar_cosmul(positive=[word],topn=topn)
+                trimed_list = [word]    #add word itself
                 for unigram in candidate:
                     #similarity filter
-                    if(float(unigram[1])<0.75 ):
+                    if(float(unigram[1])<0.7 ):
                         continue
                     #remove dulplicated word
                     trimed = re.search(ur"[\w].*[\w]",unigram[0]).group()
-                    if(len(trimed)<2):
-                        continue
                     if( trimed.lower()!=word.lower() and trimed not in trimed_list):
                         trimed_list.append( trimed )
-                #print(trimed_list)
                 if( len(trimed_list)!=0):
                     word_set.append( trimed_list )
-            proto_phrases += buildPhrase(word_set)
+                #find syn's similar, if they are too similar to syn_list, then it is syntagmatic word of segment word
+            examee_list = buildPhrase(word_set)
+            #print("similarity from " + phrase + " : ")
+            for j,examee in enumerate(examee_list):
+                try:
+                    sim_from_phrase = model.n_similarity( segments, examee )
+                    #print( " ".join(examee) + " : " +str(sim_from_phrase) )
+                    sim_map[unicode(u" ".join(examee))] = sim_from_phrase
+                except:
+                    print(" Something wrong with " + str(segments) + "to" + str(examee))
+
+            proto_phrases += examee_list
         
         except:
             print( "Something wrong happened when building candidate for [" + phrase +"]")
             continue
 
-    print( "proto_phrases count : " + str( len(proto_phrases) ) )
+    print( "proto_phrases/sim_map count : " + str( len(proto_phrases) ) + " / " + str( len(sim_map) ) )
+
+    with open("sim_map" ,"w") as map_file:
+        for proto in sim_map:
+            try:
+                map_file.write(proto + "\t" + unicode(sim_map[proto]) + "\n")
+            except:
+                print(" Something wrong with " + unicode(proto) )
+                continue
 
     with open(result_path ,"w") as result_file:
         result_file.write("Chinese\n")
