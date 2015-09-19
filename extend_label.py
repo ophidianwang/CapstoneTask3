@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import shutil
 from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
 
@@ -68,24 +67,43 @@ if __name__=="__main__":
     last = sys.argv[1]
 
     #pathes
-    extend_dir = 'extend_labels/'
-    labels_path = extend_dir + "chinese.label.source."
+    extend_dir = 'training_labels/'
+    seg_manual = extend_dir + "chinese.label.manual."
     extend_path = extend_dir + "chinese.label.extend."
-    manual_path = extend_dir + "chinese.label.manual."
-    raw_text_path = "Chinese.txt"
-    patterns_path = "patterns.csv"
+    raw_text_path = "../SegPhrase/data/Chinese.txt"
+    patterns_path = "../SegPhrase/results/patterns.csv"
+    current_file_name = ""
 
     #load quality labels
-    quality_labels = []
+    qualified_labels = []
     for i in xrange( int(last) + 1 ):
-        with open(labels_path + str(i), "r") as labels_file:
-            print( "open labels file:" + labels_path + str(i) )
-            for line in labels_file:
-                phrase = line.strip()
-                if( phrase not in quality_labels ):
-                    quality_labels.append( phrase )
+        # from previous Word2Vec result
+        current_file_name = extend_path + str(i)
+        print("try read file " + current_file_name )
+        try:
+            with open( current_file_name, "r") as labels_file:
+                for line in labels_file:
+                    line = line.strip()
+                    tmp = line.split("\t")
+                    if( int(tmp[1]) == 1 and tmp[0] not in qualified_labels):
+                        qualified_labels.append( tmp[0] )
+        except:
+            print("read file " + current_file_name +" failed")
+
+        # from previous SegPhrase result
+        current_file_name = seg_manual+str(i)
+        print("try read file " + current_file_name )
+        try:
+            with open( current_file_name, 'r') as seg_file:
+                for line in seg_file:
+                    line = line.strip()
+                    tmp = line.split("\t")
+                    if( int(tmp[1]) == 1 and tmp[0] not in qualified_labels):
+                        qualified_labels.append( tmp[0] )
+        except:
+            print("read file " + current_file_name +" failed")
                 
-    print( "quality_labels count : " + str( len(quality_labels) ) )
+    print( "qualified_labels count : " + str( len(qualified_labels) ) )
 
     #load pattern built by SegPhrase
     all_patterns = [] 
@@ -101,7 +119,7 @@ if __name__=="__main__":
     model.init_sims(replace=True)
 
     proto_phrases = []
-    for phrase in quality_labels:
+    for phrase in qualified_labels:
         try:
             word_set = []
             segments = phrase.split(' ')
@@ -121,7 +139,7 @@ if __name__=="__main__":
     for i,phrase in enumerate(proto_phrases):
         target = ' '.join(phrase)
         if( target in all_patterns ):
-            if( target not in possible_phrases and target not in quality_labels):
+            if( target not in possible_phrases and target not in qualified_labels):
                 print("#" + str(i) + " hit : " + target)
                 possible_phrases.append(target)
 
@@ -129,10 +147,8 @@ if __name__=="__main__":
 
     #append extend labels
     with open(extend_path + last ,'a') as extend_file:
-        for phrase in quality_labels:
-            extend_file.write( phrase + "\n" )
-
-        for phrase in possible_phrases:
+        for phrase in qualified_labels:
             extend_file.write( phrase + "\t1\n" )
 
-    shutil.copyfile( extend_path + last , manual_path + last )
+        for phrase in possible_phrases:
+            extend_file.write( phrase + "\t0\n" )
