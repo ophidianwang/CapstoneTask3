@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import sys
+import re
+import os.path
 from gensim.models import Word2Vec
 from gensim.models.word2vec import LineSentence
 
@@ -65,14 +67,16 @@ def buildPhrase(word_set):
 if __name__=="__main__":
 
     last = sys.argv[1]
+    build_model = sys.argv[2]
 
     #pathes
     training_dir = 'training_labels/'
     seg_manual = training_dir + "chinese.label.manual."
     extend_path = training_dir + "chinese.label.extend."
-    raw_text_path = "../SegPhrase/data/Chinese.txt"
-    patterns_path = "../SegPhrase/results/patterns.csv"
+    model_path = 'word2vec.model'
+    raw_text_path = "Chinese.txt"
     current_file_name = ""
+    result_path = "result32.txt"
 
     #load quality labels
     qualified_labels = []
@@ -105,18 +109,18 @@ if __name__=="__main__":
                 
     print( "qualified_labels count : " + str( len(qualified_labels) ) )
 
-    #load pattern built by SegPhrase
-    all_patterns = [] 
-    with open(patterns_path,'r') as patterns_file:
-        for line in (patterns_file):
-            tmp = line.strip().split(',')
-            all_patterns.append( tmp[0] )
-
-    #load raw_text
-    sentences = LineSentence(raw_text_path)
-
-    model = Word2Vec(sentences, size=100, window=5, min_count=5, workers=2)
-    model.init_sims(replace=True)
+    
+    #load model if exist
+    if( os.path.isfile(model_path) and int(build_model)!= 1):
+        print( "load existing model" )
+        model = Word2Vec.load( model_path )
+    else:
+        print( "build model" )
+        #load raw_text
+        sentences = LineSentence(raw_text_path)
+        model = Word2Vec(sentences, size=100, window=5, min_count=5, workers=2)
+        model.save(model_path)
+        model.init_sims(replace=True)
 
     proto_phrases = []
     for phrase in qualified_labels:
@@ -126,31 +130,46 @@ if __name__=="__main__":
             topn = 14 - len(segments)*2
             for word in segments:
                 candidate = model.most_similar(positive=[word],topn=topn)
-                word_set.append( dict(candidate).keys() )
+                #print(word + " similiar to :")
+                trimed_list = []
+                for unigram in candidate:
+                    #similarity filter
+                    if(float(unigram[1])<0.75 ):
+                        continue
+                    #remove dulplicated word
+                    trimed = re.search(ur"[\w].*[\w]",unigram[0]).group()
+                    if(len(trimed)<2):
+                        continue
+                    if( trimed.lower()!=word.lower() and trimed not in trimed_list):
+                        trimed_list.append( trimed )
+                #print(trimed_list)
+                if( len(trimed_list)!=0):
+                    word_set.append( trimed_list )
             proto_phrases += buildPhrase(word_set)
+        
         except:
             print( "Something wrong happened when building candidate for [" + phrase +"]")
             continue
 
     print( "proto_phrases count : " + str( len(proto_phrases) ) )
 
-    possible_phrases = []
-    #exam if the possible exist in pattern.csv
-    for i,phrase in enumerate(proto_phrases):
-        target = ' '.join(phrase)
-        if( target in all_patterns ):
-            if( target not in possible_phrases and target not in qualified_labels):
-                print("#" + str(i) + " hit : " + target)
-                possible_phrases.append(target)
-
-    print( "possible_phrases count : " + str( len(possible_phrases) ) )
-
-    #append extend labels
-    with open(extend_path + last ,'a') as extend_file:
-        """
+    with open(result_path ,"w") as result_file:
+        result_file.write("Chinese\n")
+        cursor = 0
         for phrase in qualified_labels:
-            extend_file.write( phrase + "\t1\n" )
-        """
-
-        for phrase in possible_phrases:
-            extend_file.write( phrase + "\t0\n" )
+            result_file.write( phrase + "\n" )
+            cursor +=1
+        for proto in proto_phrases:
+            phrase = " ".join(proto)
+            if( phrase not in qualified_labels):
+                #print(phrase)
+                try:
+                    result_file.write( phrase + "\n" )
+                except:
+                    continue
+                cursor +=1
+            if(cursor > 9999):
+                print("reach 10000, done")
+                break
+        else:
+            print("less than 10000, done")

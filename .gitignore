@@ -1,2 +1,3 @@
 training_labels/*.auto.*
 training_labels/*.txt
+*.model
