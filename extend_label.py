@@ -69,19 +69,21 @@ if __name__=="__main__":
 
     #pathes
     extend_dir = 'extend_labels/'
-    labels_path = extend_dir + "chinese.label.manual."
-    auto_path = extend_dir + "chinese.label.extend."
+    labels_path = extend_dir + "chinese.label.source."
+    extend_path = extend_dir + "chinese.label.extend."
+    manual_path = extend_dir + "chinese.label.manual."
     raw_text_path = "Chinese.txt"
     patterns_path = "patterns.csv"
 
-    #copy the orignial file
-    shutil.copyfile( labels_path + str(last) , labels_path + str( int(last)+1 ))
-
     #load quality labels
     quality_labels = []
-    with open(labels_path + str(last), "r") as labels_file:
-        for line in labels_file:
-            quality_labels.append( line.strip() )
+    for i in xrange( int(last) + 1 ):
+        with open(labels_path + str(i), "r") as labels_file:
+            print( "open labels file:" + labels_path + str(i) )
+            for line in labels_file:
+                phrase = line.strip()
+                if( phrase not in quality_labels ):
+                    quality_labels.append( phrase )
                 
     print( "quality_labels count : " + str( len(quality_labels) ) )
 
@@ -126,8 +128,11 @@ if __name__=="__main__":
     print( "possible_phrases count : " + str( len(possible_phrases) ) )
 
     #append extend labels
-    with open(labels_path + str( int(last)+1 ) ,'a') as extend_file:
+    with open(extend_path + last ,'a') as extend_file:
+        for phrase in quality_labels:
+            extend_file.write( phrase + "\n" )
+
         for phrase in possible_phrases:
             extend_file.write( phrase + "\t1\n" )
 
-    shutil.copyfile( labels_path + str( int(last)+1 ) , auto_path + str( int(last)+1 ) )
+    shutil.copyfile( extend_path + last , manual_path + last )
