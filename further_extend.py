@@ -118,7 +118,7 @@ if __name__=="__main__":
         print( "build model" )
         #load raw_text
         sentences = LineSentence(raw_text_path)
-        model = Word2Vec(sentences, size=200, window=5, min_count=5, workers=2)
+        model = Word2Vec(sentences, size=200, window=3, min_count=3, workers=2)
         model.save(model_path)
         model.init_sims(replace=True)
 
@@ -127,6 +127,8 @@ if __name__=="__main__":
         try:
             word_set = []
             segments = [ unicode(x) for x in phrase.split(' ')]
+            if(len(segments) > 3):
+                continue
             topn = 14 - len(segments)*2
             for j,word in enumerate(segments):
                 candidate = model.most_similar_cosmul(positive=[word],topn=topn)
@@ -145,6 +147,8 @@ if __name__=="__main__":
             examee_list = buildPhrase(word_set)
             #print("similarity from " + phrase + " : ")
             for j,examee in enumerate(examee_list):
+                if(len(examee) != len(set(examee)) ):
+                    continue
                 try:
                     sim_from_phrase = model.n_similarity( segments, examee )
                     if(sim_from_phrase == True or sim_from_phrase > 0.9999 ):
@@ -172,7 +176,7 @@ if __name__=="__main__":
             try:
                 map_file.write(proto + "\t" + unicode(sim_map[proto]) + "\n")
             except:
-                print(" Something wrong with " + unicode(proto) )
+                #print(" Something wrong with " + unicode(proto) )
                 continue
 
     with open(result_path ,"w") as result_file:
