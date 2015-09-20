@@ -1,3 +1,5 @@
 training_labels/*.auto.*
 training_labels/*.txt
 *.model
+result.txt
+sim_map
