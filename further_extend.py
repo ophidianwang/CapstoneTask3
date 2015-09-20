@@ -123,10 +123,7 @@ if __name__=="__main__":
         model.init_sims(replace=True)
 
     sim_map = {}
-    proto_phrases = []
     for i,phrase in enumerate(qualified_labels):
-        if(i>20):
-            break;
         try:
             word_set = []
             segments = [ unicode(x) for x in phrase.split(' ')]
@@ -161,14 +158,11 @@ if __name__=="__main__":
                         sim_map[examee_name] = sim_from_phrase
                 except:
                     print(" Something wrong with " + str(segments) + "to" + str(examee))
-
-            proto_phrases += examee_list
         
         except:
             print( "Something wrong happened when building candidate for [" + phrase +"]")
             continue
 
-    print( "proto_phrases count : " + str( len(proto_phrases) ) )
     print( "sim_map count : " + str( len(sim_map) ) )
 
     #sort sim_map by similarity
