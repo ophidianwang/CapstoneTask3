@@ -122,17 +122,14 @@ if __name__=="__main__":
         model.save(model_path)
         model.init_sims(replace=True)
 
-    proto_phrases = []
     sim_map = {}
+    proto_phrases = []
     for i,phrase in enumerate(qualified_labels):
-        if(i>200):
+        if(i>20):
             break;
         try:
             word_set = []
             segments = [ unicode(x) for x in phrase.split(' ')]
-            print(segments)
-            if(len(segments)>2):
-                continue
             topn = 14 - len(segments)*2
             for j,word in enumerate(segments):
                 candidate = model.most_similar_cosmul(positive=[word],topn=topn)
@@ -153,8 +150,15 @@ if __name__=="__main__":
             for j,examee in enumerate(examee_list):
                 try:
                     sim_from_phrase = model.n_similarity( segments, examee )
+                    if(sim_from_phrase == True or sim_from_phrase > 0.9999 ):
+                        continue    #same phrase
+                    examee_name = unicode(u" ".join(examee))
                     #print( " ".join(examee) + " : " +str(sim_from_phrase) )
-                    sim_map[unicode(u" ".join(examee))] = sim_from_phrase
+                    #sim_map[unicode(u" ".join(examee))] = sim_from_phrase
+                    if(examee_name not in sim_map):
+                        sim_map[examee_name] = sim_from_phrase
+                    elif(examee_name in sim_map and sim_from_phrase > sim_map[examee_name]):
+                        sim_map[examee_name] = sim_from_phrase
                 except:
                     print(" Something wrong with " + str(segments) + "to" + str(examee))
 
@@ -164,10 +168,13 @@ if __name__=="__main__":
             print( "Something wrong happened when building candidate for [" + phrase +"]")
             continue
 
-    print( "proto_phrases/sim_map count : " + str( len(proto_phrases) ) + " / " + str( len(sim_map) ) )
+    print( "proto_phrases count : " + str( len(proto_phrases) ) )
+    print( "sim_map count : " + str( len(sim_map) ) )
 
+    #sort sim_map by similarity
+    map_to_list = sorted( sim_map, key=sim_map.__getitem__, reverse=True )
     with open("sim_map" ,"w") as map_file:
-        for proto in sim_map:
+        for proto in map_to_list:
             try:
                 map_file.write(proto + "\t" + unicode(sim_map[proto]) + "\n")
             except:
@@ -180,12 +187,10 @@ if __name__=="__main__":
         for phrase in qualified_labels:
             result_file.write( phrase + "\n" )
             cursor +=1
-        for proto in proto_phrases:
-            phrase = " ".join(proto)
-            if( phrase not in qualified_labels):
-                #print(phrase)
+        for proto in map_to_list:
+            if( proto not in qualified_labels):
                 try:
-                    result_file.write( phrase + "\n" )
+                    result_file.write( proto + "\n" )
                 except:
                     continue
                 cursor +=1
