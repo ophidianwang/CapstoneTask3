@@ -6,7 +6,7 @@ import shutil
 
 now = sys.argv[1]
 
-#dir pathes
+# dir pathes
 training_dir = 'training_labels/'
 seg_dir = '../SegPhrase/data/'
 source = seg_dir + 'chinese.label.auto'
